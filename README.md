@@ -4,6 +4,24 @@ Frontdesk is a support-ticket system built for Arvo Systems to eliminate late ti
 
 ---
 
+## Demo Accounts
+
+All demo accounts are seeded with password: `Password123!`
+
+- **Lead Supervisor**: `lead@arvosystems.com` (Role: `lead`)
+- **Support Agents**:
+  - `agent1@arvosystems.com` (Role: `agent`)
+  - `agent2@arvosystems.com` (Role: `agent`)
+  - `agent3@arvosystems.com` (Role: `agent`)
+  - `agent4@arvosystems.com` (Role: `agent`)
+  - `agent5@arvosystems.com` (Role: `agent`)
+  - `agent6@arvosystems.com` (Role: `agent`)
+  - `agent7@arvosystems.com` (Role: `agent`)
+  - `agent8@arvosystems.com` (Role: `agent`)
+  - `agent9@arvosystems.com` (Role: `agent`)
+
+---
+
 ## Assumptions & Decisions
 
 1. **Working Time & SLA Targets (Asia/Kolkata)**:
@@ -26,10 +44,13 @@ Frontdesk is a support-ticket system built for Arvo Systems to eliminate late ti
    - Immutability is enforced directly at the database engine level via PostgreSQL `BEFORE UPDATE OR DELETE` and `BEFORE TRUNCATE` triggers on `ticket_events`, `messages`, and `internal_notes`.
 4. **Data Isolation (R8)**:
    - `internal_notes` is stored in a separate table from customer-visible `messages`, preventing accidental data leaks.
-5. **Architecture & Testing**:
+5. **Atomic Claim Concurrency (R7)**:
+   - Conditional atomic `UPDATE ... WHERE assignee_id IS NULL` prevents double-taking under high concurrency. Losers receive HTTP 409 specifying the current assignee.
+   - Only the assignee or a lead is permitted to reply, add notes, or resolve tickets (HTTP 403 otherwise).
+6. **Architecture & Testing**:
    - Monorepo with `/server` (Node.js + TypeScript + Express + `pg` + Vitest) and `/web` (React + Vite + TypeScript).
    - Injectable `Clock` abstraction (`SystemClock`, `FakeClock`) for deterministic simulation of SLA policies and time-travel tests.
-   - Tests run in-memory and against embedded PostgreSQL (PGlite) when a standalone PostgreSQL daemon is not present.
+   - Zero-dependency embedded testing using `@electric-sql/pglite` (Postgres WASM) ensures comprehensive test coverage without external services.
 
 ---
 
@@ -83,5 +104,26 @@ Frontend will be served directly at `http://localhost:3000`.
 
 ---
 
-## API Overview & Health Check
+## API Overview & Endpoints
+
+### Health Check
 - `GET /health` - Service health status and database connectivity check.
+
+### Authentication (`/api/auth`)
+- `POST /api/auth/login` - Authenticate with email and password, returns JWT token.
+- `GET /api/auth/me` - Get current authenticated user profile.
+
+### Agent API (`/api/agent`)
+- `GET /api/agent/tickets` - List tickets with filters (`all`, `mine`, `unassigned`, `late`, `waiting_customer`) and live SLA status.
+- `GET /api/agent/tickets/:id` - Ticket detail with complete timeline (messages, notes, audit events).
+- `POST /api/agent/tickets/:id/claim` - Atomic ticket claim (HTTP 409 on conflict).
+- `POST /api/agent/tickets/:id/release` - Release ticket back to queue.
+- `POST /api/agent/tickets/:id/reply` - Public reply to customer (optional `waitForCustomer: true` pauses SLA).
+- `POST /api/agent/tickets/:id/notes` - Add internal team-only note.
+- `POST /api/agent/tickets/:id/resolve` - Resolve ticket.
+- `POST /api/agent/tickets/:id/priority` - Change ticket priority with mid-ticket deadline recomputation.
+- `GET /api/agent/tickets/export/csv` - CSV export for agents (strictly excludes internal notes).
+- `GET /api/agent/reports/late` - Late tickets root cause analysis report (Lead only).
+- `GET /api/agent/holidays` - View holidays list.
+- `POST /api/agent/holidays` - Add holiday (Lead only).
+- `DELETE /api/agent/holidays/:id` - Delete holiday (Lead only).

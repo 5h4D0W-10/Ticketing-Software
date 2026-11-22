@@ -31,3 +31,4 @@ export function assertValidTransition(from: TicketStatus, to: TicketStatus): voi
     );
   }
 }
+

@@ -12,6 +12,7 @@ describe('Migration runner', () => {
     expect(files).toContain('001_baseline.sql');
     expect(files).toContain('002_schema.sql');
     expect(files).toContain('003_immutability_triggers.sql');
+    expect(files).toContain('004_seed_users_and_holidays.sql');
   });
 
   it('applies unapplied migrations and records them in schema_migrations', async () => {
@@ -42,6 +43,7 @@ describe('Migration runner', () => {
     expect(applied).toContain('001_baseline.sql');
     expect(applied).toContain('002_schema.sql');
     expect(applied).toContain('003_immutability_triggers.sql');
+    expect(applied).toContain('004_seed_users_and_holidays.sql');
 
     // Verifies schema_migrations table creation
     expect(
