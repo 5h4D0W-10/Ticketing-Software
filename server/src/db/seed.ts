@@ -44,7 +44,7 @@ export async function runSeeds(customPool = pool): Promise<void> {
       await client.query(
         `INSERT INTO customers (id, name, email)
          VALUES ($1, $2, $3)
-         ON CONFLICT (email) DO NOTHING;`,
+         ON CONFLICT (id) DO NOTHING;`,
         [c.id, c.name, c.email]
       );
     }
@@ -86,9 +86,16 @@ export async function runSeeds(customPool = pool): Promise<void> {
       `INSERT INTO ticket_events (ticket_id, event_type, actor_type, actor_name, occurred_at, payload)
        VALUES
          ($1, 'ticket_created', 'customer', 'Acme Corp Tech', $2, '{"priority":"Urgent"}'),
-         ($1, 'sla_breached', 'system', 'system', $3, '{"milestone":"first_response","deadline":"' || $3 || '"}'),
-         ($1, 'claimed', 'agent', 'Agent One', $4, '{"assigneeId":"' || $5 || '"}');`,
-      [t1Id, t1ClockStart, t1ResponseDue.toISOString(), createIstDate(2026, 11, 23, 12, 10, 0), agent1]
+         ($1, 'sla_breached', 'system', 'system', $3, $4),
+         ($1, 'claimed', 'agent', 'Agent One', $5, $6);`,
+      [
+        t1Id,
+        t1ClockStart,
+        t1ResponseDue,
+        JSON.stringify({ milestone: 'first_response', deadline: t1ResponseDue.toISOString() }),
+        createIstDate(2026, 11, 23, 12, 10, 0),
+        JSON.stringify({ assigneeId: agent1 }),
+      ]
     );
     await client.query(
       `INSERT INTO messages (ticket_id, sender_type, sender_name, body, created_at)
@@ -128,8 +135,8 @@ export async function runSeeds(customPool = pool): Promise<void> {
       `INSERT INTO ticket_events (ticket_id, event_type, actor_type, actor_name, occurred_at, payload)
        VALUES
          ($1, 'ticket_created', 'customer', 'Zenith Logistics', $2, '{"priority":"Medium"}'),
-         ($1, 'claimed', 'agent', 'Agent Two', $3, '{"assigneeId":"' || $4 || '"}');`,
-      [t2Id, t2ClockStart, createIstDate(2026, 11, 25, 10, 15, 0), agent2]
+         ($1, 'claimed', 'agent', 'Agent Two', $3, $4);`,
+      [t2Id, t2ClockStart, createIstDate(2026, 11, 25, 10, 15, 0), JSON.stringify({ assigneeId: agent2 })]
     );
     await client.query(
       `INSERT INTO messages (ticket_id, sender_type, sender_name, body, created_at)
@@ -164,9 +171,15 @@ export async function runSeeds(customPool = pool): Promise<void> {
       `INSERT INTO ticket_events (ticket_id, event_type, actor_type, actor_name, occurred_at, payload)
        VALUES
          ($1, 'ticket_created', 'customer', 'BlueStar Health', $2, '{"priority":"Small"}'),
-         ($1, 'claimed', 'agent', 'Agent Three', $3, '{"assigneeId":"' || $4 || '"}'),
+         ($1, 'claimed', 'agent', 'Agent Three', $3, $4),
          ($1, 'public_reply', 'agent', 'Agent Three', $5, '{"body":"Acknowledged, reviewing configuration."}');`,
-      [t3Id, t3ClockStart, createIstDate(2026, 11, 25, 10, 45, 0), agent3, createIstDate(2026, 11, 25, 11, 0, 0)]
+      [
+        t3Id,
+        t3ClockStart,
+        createIstDate(2026, 11, 25, 10, 45, 0),
+        JSON.stringify({ assigneeId: agent3 }),
+        createIstDate(2026, 11, 25, 11, 0, 0),
+      ]
     );
     await client.query(
       `INSERT INTO messages (ticket_id, sender_type, sender_name, body, created_at)
@@ -210,11 +223,11 @@ export async function runSeeds(customPool = pool): Promise<void> {
       `INSERT INTO ticket_events (ticket_id, event_type, actor_type, actor_name, occurred_at, payload)
        VALUES
          ($1, 'ticket_created', 'customer', 'FinTech Cloud', $2, '{"priority":"Medium"}'),
-         ($1, 'claimed', 'agent', 'Agent Four', $3, '{"assigneeId":"' || $4 || '"}'),
+         ($1, 'claimed', 'agent', 'Agent Four', $3, $4),
          ($1, 'public_reply', 'agent', 'Agent Four', $5, '{"body":"Please provide request IDs"}'),
          ($1, 'sla_paused', 'agent', 'Agent Four', $5, '{"reason":"waiting_customer"}'),
          ($1, 'status_changed', 'agent', 'Agent Four', $5, '{"oldStatus":"OPEN","newStatus":"WAITING_CUSTOMER"}');`,
-      [t4Id, t4ClockStart, createIstDate(2026, 11, 24, 11, 30, 0), agent4, t4PausedAt]
+      [t4Id, t4ClockStart, createIstDate(2026, 11, 24, 11, 30, 0), JSON.stringify({ assigneeId: agent4 }), t4PausedAt]
     );
     await client.query(
       `INSERT INTO messages (ticket_id, sender_type, sender_name, body, created_at)
@@ -257,10 +270,10 @@ export async function runSeeds(customPool = pool): Promise<void> {
       `INSERT INTO ticket_events (ticket_id, event_type, actor_type, actor_name, occurred_at, payload)
        VALUES
          ($1, 'ticket_created', 'customer', 'Kerala Retail Hub', $2, '{"priority":"Small"}'),
-         ($1, 'claimed', 'agent', 'Agent Five', $3, '{"assigneeId":"' || $4 || '"}'),
+         ($1, 'claimed', 'agent', 'Agent Five', $3, $4),
          ($1, 'public_reply', 'agent', 'Agent Five', $5, '{"body":"Which GSTIN format are you using?"}'),
          ($1, 'sla_paused', 'agent', 'Agent Five', $5, '{"reason":"waiting_customer"}');`,
-      [t5Id, t5ClockStart, createIstDate(2026, 11, 19, 10, 30, 0), agent5, t5PausedAt]
+      [t5Id, t5ClockStart, createIstDate(2026, 11, 19, 10, 30, 0), JSON.stringify({ assigneeId: agent5 }), t5PausedAt]
     );
 
     // =========================================================================
@@ -291,10 +304,17 @@ export async function runSeeds(customPool = pool): Promise<void> {
       `INSERT INTO ticket_events (ticket_id, event_type, actor_type, actor_name, occurred_at, payload)
        VALUES
          ($1, 'ticket_created', 'customer', 'Acme Corp Tech', $2, '{"priority":"Medium"}'),
-         ($1, 'claimed', 'agent', 'Agent Six', $3, '{"assigneeId":"' || $4 || '"}'),
+         ($1, 'claimed', 'agent', 'Agent Six', $3, $4),
          ($1, 'public_reply', 'agent', 'Agent Six', $5, '{"body":"Please upload renewed x509 cert"}'),
          ($1, 'status_changed', 'agent', 'Agent Six', $6, '{"oldStatus":"OPEN","newStatus":"RESOLVED"}');`,
-      [t6Id, t6ClockStart, createIstDate(2026, 11, 19, 10, 0, 0), agent6, createIstDate(2026, 11, 19, 11, 0, 0), t6ResolvedAt]
+      [
+        t6Id,
+        t6ClockStart,
+        createIstDate(2026, 11, 19, 10, 0, 0),
+        JSON.stringify({ assigneeId: agent6 }),
+        createIstDate(2026, 11, 19, 11, 0, 0),
+        t6ResolvedAt,
+      ]
     );
 
     // =========================================================================
@@ -412,16 +432,17 @@ export async function runSeeds(customPool = pool): Promise<void> {
       `INSERT INTO ticket_events (ticket_id, event_type, actor_type, actor_name, occurred_at, payload)
        VALUES
          ($1, 'ticket_created', 'customer', 'Kerala Retail Hub', $2, '{"cycle":1,"priority":"Medium"}'),
-         ($1, 'claimed', 'agent', 'Agent Seven', $3, '{"assigneeId":"' || $4 || '"}'),
+         ($1, 'claimed', 'agent', 'Agent Seven', $3, $4),
          ($1, 'status_changed', 'agent', 'Agent Seven', $5, '{"oldStatus":"OPEN","newStatus":"RESOLVED"}'),
-         ($1, 'reopened', 'customer', 'Kerala Retail Hub', $6, '{"cycle":2,"reopenedAt":"' || $6 || '","reason":"Crash still reproducing on iOS 17.5"}');`,
+         ($1, 'reopened', 'customer', 'Kerala Retail Hub', $6, $7);`,
       [
         t9Id,
         t9Cycle1Start,
         createIstDate(2026, 11, 23, 10, 30, 0),
-        agent7,
+        JSON.stringify({ assigneeId: agent7 }),
         createIstDate(2026, 11, 23, 17, 0, 0),
         t9ReopenTime,
+        JSON.stringify({ cycle: 2, reopenedAt: t9ReopenTime.toISOString(), reason: 'Crash still reproducing on iOS 17.5' }),
       ]
     );
     await client.query(
