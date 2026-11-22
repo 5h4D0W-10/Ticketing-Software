@@ -26,9 +26,28 @@ Frontdesk is packaged as a **single deployable unit**: the Node.js/Express backe
 
 ## Option 1: Render (Recommended - Free Tier)
 
-Render provides both a free Web Service (Node.js) and a free managed PostgreSQL instance that can be set up in under 5 minutes.
+Render provides both a free Web Service (Node.js) and a free managed PostgreSQL instance.
 
-### Step 1: Create a PostgreSQL Database on Render
+### Method A: One-Click Blueprint Deployment (Automated via `render.yaml`)
+
+This repository contains a pre-configured `render.yaml` Blueprint file that automatically creates both the managed PostgreSQL database and the web service, links their connection strings, and generates secure secrets with zero manual configuration.
+
+1. Log in to [dashboard.render.com](https://dashboard.render.com/).
+2. Click **New +** and select **Blueprint**.
+3. Connect your GitHub repository (`https://github.com/5h4D0W-10/Ticketing-Software.git`).
+4. Render will parse `render.yaml` and display the resources to create:
+   - **Database**: `frontdesk-db` (Free PostgreSQL)
+   - **Web Service**: `frontdesk-app` (Free Node Web Service)
+5. Click **Apply**.
+6. Render will automatically provision PostgreSQL, run `npm install && npm run build`, execute database migrations and seed data on startup, and launch the service at `https://frontdesk-app.onrender.com`.
+
+---
+
+### Method B: Manual Dashboard Setup
+
+If you prefer to configure the services manually:
+
+#### Step 1: Create a PostgreSQL Database on Render
 1. Log in to [dashboard.render.com](https://dashboard.render.com/).
 2. Click **New +** and select **PostgreSQL**.
 3. Configure the database:

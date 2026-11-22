@@ -23,11 +23,22 @@ export interface FrontdeskDb extends DbClient {
 let activeDb: FrontdeskDb | null = null;
 let initPromise: Promise<FrontdeskDb> | null = null;
 
+const isProduction = process.env.NODE_ENV === 'production';
+const dbUrl = process.env.DATABASE_URL || '';
+const requiresSsl =
+  Boolean(dbUrl) &&
+  (isProduction ||
+    dbUrl.includes('render.com') ||
+    dbUrl.includes('neon.tech') ||
+    dbUrl.includes('supabase.co') ||
+    dbUrl.includes('sslmode=require'));
+
 const rawPool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://frontdesk:frontdesk_secret@localhost:5432/frontdesk_dev',
+  connectionString: dbUrl || 'postgres://frontdesk:frontdesk_secret@localhost:5432/frontdesk_dev',
+  ssl: requiresSsl ? { rejectUnauthorized: false } : undefined,
   max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 1500,
+  connectionTimeoutMillis: 10000,
 });
 
 export async function getOrInitDb(): Promise<FrontdeskDb> {
