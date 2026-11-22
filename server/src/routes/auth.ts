@@ -68,3 +68,4 @@ export function createAuthRouter(db: DbClient = pool): Router {
 
   return router;
 }
+

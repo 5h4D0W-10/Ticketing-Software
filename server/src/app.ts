@@ -8,6 +8,7 @@ import { DbClient } from './db/transaction.js';
 import { Clock, SystemClock } from './time/clock.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createAgentRouter } from './routes/agent.js';
+import { createCustomerRouter } from './routes/customer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +37,7 @@ export function createApp(db: DbClient = pool, clock: Clock = new SystemClock())
   // API Routers
   app.use('/api/auth', createAuthRouter(db));
   app.use('/api/agent', createAgentRouter(db, clock));
+  app.use('/api/customer', createCustomerRouter(db, clock));
 
   // Production: serve built frontend from web/dist
   const candidates = [

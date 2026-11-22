@@ -26,3 +26,9 @@ Running list of anything skipped, deferred, or intentionally simplified, with ra
 - **Action Guarding (R7)**: Non-assignee agents attempting to reply, add notes, or resolve are rejected with HTTP 403. Lead role can supervise and act across any ticket.
 - **Data Protection (R8)**: Agent CSV export strictly excludes internal notes. Internal notes reside in a separate table and are accessible only to authenticated agents on ticket detail.
 - **Late Tickets Report (R6)**: Lead-only report breaks down exact causes of lateness (unclaimed duration, late first response, resolution overdue) and highlights customer waiting exclusions.
+
+## Phase 4: Customer API, Strict Note Separation, Canary Test
+- **Customer Endpoints (`/api/customer/*`)**: Public ticket creation (with sliding rate limiting), unguessable 48-hex character public tokens (`/api/customer/tickets/:token`), customer reply with automatic SLA resume, customer JSON/CSV export, and customer reopen.
+- **Strict Note Separation (INC-0304, R8)**: Customer code does not import or query the `internal_notes` table. Explicit field whitelist serializers guarantee no sensitive fields or internal team notes ever reach customer endpoints.
+- **Canary Test (R8)**: Tested with `SECRET-CANARY-123` across all customer endpoints (create, get by token, reply, reopen, JSON export, CSV export, and 404/400 error responses), asserting that the canary string never appears in any response body or header. Positive verification confirmed that only authenticated agents can see the note on the agent timeline.
+- **Customer Reopen (R4)**: Implemented 5-working-day (2700 working minutes) reopen window with cycle increment, fresh SLA cycle calculation, and `reopen_rejected` audit event logging if expired.

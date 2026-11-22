@@ -127,3 +127,10 @@ Frontend will be served directly at `http://localhost:3000`.
 - `GET /api/agent/holidays` - View holidays list.
 - `POST /api/agent/holidays` - Add holiday (Lead only).
 - `DELETE /api/agent/holidays/:id` - Delete holiday (Lead only).
+
+### Customer API (`/api/customer`)
+- `POST /api/customer/tickets` - Create new ticket (public, rate-limited, maps urgency choices to priorities).
+- `GET /api/customer/tickets/:token` - Get ticket public conversation by secret unguessable token (messages only).
+- `POST /api/customer/tickets/:token/reply` - Customer reply (resumes SLA clocks if ticket is waiting on customer).
+- `POST /api/customer/tickets/:token/reopen` - Reopen a resolved ticket within the 5-working-day window (starts a new SLA cycle).
+- `GET /api/customer/tickets/:token/export` - Export conversation history as JSON or CSV (public messages only).

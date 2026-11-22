@@ -34,3 +34,4 @@ VALUES
   ('2026-11-08', 'Deepavali (Diwali)', 'Festival Holiday (verify dates)'),
   ('2026-12-25', 'Christmas', 'Public Holiday')
 ON CONFLICT (holiday_date) DO NOTHING;
+
