@@ -70,7 +70,7 @@ If you prefer to configure the services manually:
    - **Runtime**: `Node`
    - **Build Command**:
      ```bash
-     npm install && npm run build
+     npm install --include=dev && npm run build
      ```
    - **Start Command**:
      ```bash
