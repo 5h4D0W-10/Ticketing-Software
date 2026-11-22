@@ -150,3 +150,19 @@ Frontend will be served directly at `http://localhost:3000`.
 - `POST /api/customer/tickets/:token/reply` - Customer reply (resumes SLA clocks if ticket is waiting on customer).
 - `POST /api/customer/tickets/:token/reopen` - Reopen a resolved ticket within the 5-working-day window (starts a new SLA cycle).
 - `GET /api/customer/tickets/:token/export` - Export conversation history as JSON or CSV (public messages only).
+
+---
+
+## Production Deployment
+
+For complete, step-by-step instructions on deploying Frontdesk online to **Render** (free Web Service + free PostgreSQL), **Railway**, or **Fly.io + Neon**, see [DEPLOY.md](DEPLOY.md).
+
+### Quick Production Build & Run
+```bash
+# 1. Build frontend and backend
+npm run build
+
+# 2. Start single-service production server (auto-runs migrations and seeds)
+npm start
+```
+The server serves both the REST API and the built React SPA directly at `http://localhost:3000`.

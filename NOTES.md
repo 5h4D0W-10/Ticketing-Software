@@ -76,3 +76,29 @@ Running list of anything skipped, deferred, or intentionally simplified, with ra
   - Public ticket creation form with 3 urgency options mapped to Urgent, Medium, and Small.
   - Generates unguessable secret access link (`/#/ticket/:token`).
   - Customer ticket view showing exclusively public messages, reply box (auto-resuming paused SLA), and 5-working-day reopen button (or pre-filled follow-up creation link when closed/expired).
+
+## Phase 7: Seed Data, Production Build, Deploy Guide
+- **Idempotent Seed Script (`server/src/db/seed.ts`)**:
+  - Seeds 9 support agents + 1 lead supervisor with demo credentials (`Password123!`).
+  - Seeds 13 official 2026 Kerala & Indian festival/public holidays with the note to verify dates.
+  - Automatically checks `tickets` table; if tickets already exist, skips sample ticket creation to preserve live/production data.
+  - Seeds 10 realistic sample tickets covering all business rules and edge cases:
+    1. Late Urgent ticket (first reply breached, red LATE badge).
+    2. Medium nearly due ticket (resolution due in ~45 working minutes).
+    3. Small fine ticket (on track with ample working time).
+    4. Waiting on customer ticket (SLA clock paused, open pause interval in `sla_pauses`).
+    5. About to auto-close ticket (~36 working hours silent in `WAITING_CUSTOMER`, ~1 working day before auto-close).
+    6. Resolved near reopen limit (resolved ~36 working hours ago, ~1 working day remaining in 5-working-day reopen window).
+    7. Created Friday 6:00 PM ticket (arrived at closing boundary, SLA clock starts Monday 09:30 AM without weekend penalty).
+    8. Unassigned queue tickets (two tickets in `NEW` status ready for atomic claiming).
+    9. Reopened ticket (Cycle 2, previous cycle preserved in audit events, fresh SLA cycle calculated).
+  - Terminal output clearly prints demo login credentials upon execution.
+- **Production Readiness (`server/src/index.ts`)**:
+  - Validates environment variables (`DATABASE_URL`, `JWT_SECRET`, `PORT`, `INTERNAL_SECRET`).
+  - Automatic migrations (`runMigrations`) and idempotent seed (`runSeeds`, only if empty) run on container boot.
+  - Graceful shutdown handles `SIGTERM` and `SIGINT`, cleanly terminating background cron schedulers and closing database connection pools.
+  - Single deployable: Express serves built React static assets from `web/dist` with client-side routing fallback.
+- **Deployment Documentation (`DEPLOY.md`)**:
+  - Detailed step-by-step guides for Render (Free Web Service + Free PostgreSQL), Railway, and Fly.io + Neon PostgreSQL.
+  - Explicit environment variable tables, build commands, and start commands.
+  - Addresses free-tier cold starts (explaining why Frontdesk's lazy SLA engine ensures immunity to timing drift during sleep) and 30-day database expiry risks.
