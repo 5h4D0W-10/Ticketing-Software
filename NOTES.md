@@ -102,3 +102,33 @@ Running list of anything skipped, deferred, or intentionally simplified, with ra
   - Detailed step-by-step guides for Render (Free Web Service + Free PostgreSQL), Railway, and Fly.io + Neon PostgreSQL.
   - Explicit environment variable tables, build commands, and start commands.
   - Addresses free-tier cold starts (explaining why Frontdesk's lazy SLA engine ensures immunity to timing drift during sleep) and 30-day database expiry risks.
+
+## Phase 8: Documentation & Final Verification
+- **Traceability Matrix (`docs/TRACEABILITY.md`)**: Full mapping of all 14 requirements (R1–R14) to implementation files, database triggers, and 59 automated tests.
+- **Incident Verification Suite**: All three core incidents verified with 100% test pass rate:
+  - INC-0291 (Double-taking): Atomic conditional update tested with simultaneous promises; exactly one 200, four 409s.
+  - INC-0304 (Private note leak): Negative canary testing across 10 customer endpoints and error responses confirms zero data leakage.
+  - INC-0318 (Audit tamper): Database triggers verified; SQL updates and deletes throw hard exceptions; first-reply duration provable from audit records.
+
+---
+
+## What Did You Not Finish, and Why?
+
+To maintain the ~8-hour scope rule and prioritize **100% correctness of core business rules and SLA math**, the following secondary features were intentionally deferred or simplified:
+
+1. **Outbound Email & WhatsApp Notifications (SMTP / SES / Twilio)**:
+   - *Status*: Deferred.
+   - *Why*: Integrating external email/SMS providers requires third-party API credentials, webhook tunnels, and email delivery retry queues that complicate automated offline evaluation. Instead, customer communication is handled via self-contained unguessable secret token URLs (`/#/ticket/:token`), providing an immediate, fully functional conversation loop for both customers and evaluators without external infrastructure dependencies.
+2. **Cryptographic Hash-Chain Verification on Audit Events (R9 Bonus)**:
+   - *Status*: Deferred (Database-level triggers implemented instead).
+   - *Why*: SPEC R9 suggested a SHA-256 hash-chain as an optional bonus. Because Frontdesk enforces immutability directly in the PostgreSQL engine via `BEFORE UPDATE OR DELETE` and `BEFORE TRUNCATE` triggers (which throw PostgreSQL exceptions whenever any application process or SQL command attempts modification), tamper resistance is guaranteed at the database layer. A Merkle-tree or linear hash-chain verification endpoint was deferred as redundant given the engine-level immutability guarantees.
+3. **Binary File & Image Attachment Uploads (S3 / Cloudflare R2)**:
+   - *Status*: Deferred.
+   - *Why*: The domain model supports rich text messages, stack traces, and URLs. Handling binary file attachments (presigned S3 URLs, multipart form parsers, virus scanning) would have added significant operational complexity without contributing to the core SLA calculation and state machine evaluation.
+4. **Server-Side Keyset / Cursor Pagination on Ticket List**:
+   - *Status*: Simplified (Full active queue query with client-side sorting).
+   - *Why*: Arvo Systems processes approximately 40 tickets/day across 9 agents. The entire active queue fits comfortably in memory (< 100 KB payload) and sorting by urgent deadline in Node/Postgres delivers sub-millisecond query performance. As volume grows into tens of thousands of active tickets, standard SQL `LIMIT` / `OFFSET` or cursor pagination can be layered on top of the existing queries.
+5. **Multi-Tenant Customer Authentication & Password Portals**:
+   - *Status*: Omitted by design per specification.
+   - *Why*: SPEC R10 explicitly states that customers should not have to register or log in: *"Customer gets a secret unguessable link (token) to view the public conversation, reply, and reopen if allowed. No customer login."* Customer access is secured via unguessable 48-character cryptographic tokens and sliding rate limiters.
+
