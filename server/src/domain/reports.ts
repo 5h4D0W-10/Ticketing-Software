@@ -21,18 +21,33 @@ export interface LateTicketReportItem {
   excludedCustomerWaitingFormatted: string;
 }
 
-export function formatWorkingDuration(minutes: number): string {
-  if (minutes < 60) {
-    return `${Math.round(minutes)}m`;
+export function formatDurationCompact(minutes: number): string {
+  const rounded = Math.round(minutes);
+  if (rounded < 60) {
+    return `${rounded}m`;
   }
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = Math.round(minutes % 60);
-  if (hours >= 9) {
-    const days = (minutes / 540).toFixed(1);
-    return `${days} working day(s) (${hours}h ${remainingMinutes}m)`;
+  const hours = Math.floor(rounded / 60);
+  const remainingMinutes = rounded % 60;
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
   }
-  return `${hours}h ${remainingMinutes}m`;
+  return `${hours}h${remainingMinutes}m`;
 }
+
+export function formatDaysOrHours(minutes: number): string {
+  const rounded = Math.round(minutes);
+  if (rounded % 540 === 0 && rounded >= 540) {
+    const days = rounded / 540;
+    return `${days} working day${days > 1 ? 's' : ''}`;
+  }
+  if (rounded >= 540) {
+    const days = (rounded / 540).toFixed(1);
+    return `${days} working days`;
+  }
+  return formatDurationCompact(rounded);
+}
+
+export const formatWorkingDuration = formatDaysOrHours;
 
 export async function generateLateTicketsReport(
   db: DbClient,
@@ -70,7 +85,7 @@ export async function generateLateTicketsReport(
 
     const reasons: string[] = [];
 
-    // 1. Analyze Claim timing
+    // 1. Analyze Claim timing (e.g. "not claimed for 3h10m")
     if (ticket.claimed_at) {
       const timeToClaim = workingMinutesBetween(
         new Date(ticket.clock_start),
@@ -78,39 +93,39 @@ export async function generateLateTicketsReport(
         holidays
       );
       if (new Date(ticket.claimed_at).getTime() > new Date(ticket.response_due_at).getTime()) {
-        reasons.push(`Not claimed until after response deadline (took ${formatWorkingDuration(timeToClaim)})`);
+        reasons.push(`not claimed for ${formatDurationCompact(timeToClaim)}`);
       } else if (timeToClaim > 120) {
-        reasons.push(`Claim delayed by ${formatWorkingDuration(timeToClaim)}`);
+        reasons.push(`not claimed for ${formatDurationCompact(timeToClaim)}`);
       }
     } else if (ticket.assignee_id === null) {
       const unclaimedDuration = workingMinutesBetween(new Date(ticket.clock_start), now, holidays);
-      reasons.push(`Currently unassigned (unclaimed for ${formatWorkingDuration(unclaimedDuration)})`);
+      reasons.push(`not claimed for ${formatDurationCompact(unclaimedDuration)}`);
     }
 
-    // 2. Analyze First response timing
+    // 2. Analyze First response timing (e.g. "first reply 45 working min after deadline")
     if (ticket.first_response_at) {
       const responseDate = new Date(ticket.first_response_at);
       const responseDueDate = new Date(ticket.response_due_at);
       if (responseDate.getTime() > responseDueDate.getTime()) {
         const lateMinutes = workingMinutesBetween(responseDueDate, responseDate, holidays);
-        reasons.push(`First reply was ${formatWorkingDuration(lateMinutes)} after deadline`);
+        reasons.push(`first reply ${Math.round(lateMinutes)} working min after deadline`);
       }
     } else if (now.getTime() > new Date(ticket.response_due_at).getTime()) {
       const overdueMinutes = workingMinutesBetween(new Date(ticket.response_due_at), now, holidays);
-      reasons.push(`First reply overdue by ${formatWorkingDuration(overdueMinutes)}`);
+      reasons.push(`first reply ${Math.round(overdueMinutes)} working min after deadline`);
     }
 
-    // 3. Analyze Resolution timing
+    // 3. Analyze Resolution timing (e.g. "resolution overdue by 1 working day")
     if (ticket.resolved_at) {
       const resolvedDate = new Date(ticket.resolved_at);
       const resolutionDueDate = new Date(ticket.resolution_due_at);
       if (resolvedDate.getTime() > resolutionDueDate.getTime()) {
         const lateMinutes = workingMinutesBetween(resolutionDueDate, resolvedDate, holidays);
-        reasons.push(`Resolution overdue by ${formatWorkingDuration(lateMinutes)}`);
+        reasons.push(`resolution overdue by ${formatDaysOrHours(lateMinutes)}`);
       }
     } else if (now.getTime() > new Date(ticket.resolution_due_at).getTime()) {
       const overdueMinutes = workingMinutesBetween(new Date(ticket.resolution_due_at), now, holidays);
-      reasons.push(`Resolution overdue by ${formatWorkingDuration(overdueMinutes)}`);
+      reasons.push(`resolution overdue by ${formatDaysOrHours(overdueMinutes)}`);
     }
 
     if (reasons.length === 0) {
@@ -141,10 +156,9 @@ export async function generateLateTicketsReport(
       resolvedAt: ticket.resolved_at ? new Date(ticket.resolved_at).toISOString() : null,
       reasons,
       excludedCustomerWaitingMinutes: totalPausedMinutes,
-      excludedCustomerWaitingFormatted: formatWorkingDuration(totalPausedMinutes),
+      excludedCustomerWaitingFormatted: formatDaysOrHours(totalPausedMinutes),
     });
   }
 
   return lateTickets;
 }
-

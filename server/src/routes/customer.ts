@@ -53,7 +53,7 @@ export function createCustomerRouter(
 
   // 1. Create ticket (public endpoint, R10)
   router.post('/tickets', async (req: Request, res: Response) => {
-    const { name, email, subject, description, urgency } = req.body || {};
+    const { name, email, subject, description, urgency, parentTicketId } = req.body || {};
 
     if (!name || typeof name !== 'string' || name.trim().length < 2) {
       res.status(400).json({ error: 'Name is required (at least 2 characters)' });
@@ -79,6 +79,7 @@ export function createCustomerRouter(
         subject: subject.trim(),
         description: description.trim(),
         priority,
+        parentTicketId: parentTicketId ? String(parentTicketId).trim() : undefined,
         customer: {
           name: name.trim(),
           email: email.trim().toLowerCase(),
@@ -99,6 +100,10 @@ export function createCustomerRouter(
     const token = req.params.token;
 
     try {
+      const now = clock.now();
+      // Lazy auto-close sweep on read (for free tier sleeping environments, R3)
+      await ticketService.sweepAutoCloseTickets(now);
+
       const ticket = await findTicketByToken(token);
       if (!ticket) {
         res.status(404).json({ error: 'Ticket not found' });
@@ -160,6 +165,12 @@ export function createCustomerRouter(
       if (ticket.status === 'CLOSED') {
         res.status(400).json({
           error: 'This ticket is closed and cannot receive replies. Please open a new ticket.',
+          isClosed: true,
+          canFollowUp: true,
+          followUp: {
+            parentTicketId: ticket.id,
+            subject: `Follow-up: ${ticket.subject}`,
+          },
         });
         return;
       }
@@ -234,6 +245,11 @@ export function createCustomerRouter(
         res.status(400).json({
           error: 'The reopen window of 5 working days has expired. Please open a new follow-up ticket.',
           expired: true,
+          canFollowUp: true,
+          followUp: {
+            parentTicketId: ticket.id,
+            subject: `Follow-up: ${ticket.subject}`,
+          },
         });
         return;
       }
@@ -351,3 +367,4 @@ export function createCustomerRouter(
 
   return router;
 }
+

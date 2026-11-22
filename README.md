@@ -47,7 +47,17 @@ All demo accounts are seeded with password: `Password123!`
 5. **Atomic Claim Concurrency (R7)**:
    - Conditional atomic `UPDATE ... WHERE assignee_id IS NULL` prevents double-taking under high concurrency. Losers receive HTTP 409 specifying the current assignee.
    - Only the assignee or a lead is permitted to reply, add notes, or resolve tickets (HTTP 403 otherwise).
-6. **Architecture & Testing**:
+6. **Auto-Close Sweep (R3)**:
+   - Tickets remaining in `WAITING_CUSTOMER` for 5 working days (45 working hours = 2700 working minutes) are auto-closed by an idempotent sweep with actor `"system"` and event `auto_closed`.
+   - Executed via background cron, lazy evaluation on ticket reads (ensuring sleeping free-tier deployments remain accurate), and via protected webhook `POST /api/internal/sweep`.
+   - Any reply to a closed ticket returns follow-up metadata (`parentTicketId`) to open a new linked ticket.
+7. **Reopen Window (R4)**:
+   - Customers may reopen `RESOLVED` tickets only within 5 working days of resolution.
+   - Reopening transitions the ticket to `OPEN`, increments `cycle`, and starts a fresh SLA cycle.
+   - Reopen attempts after 5 working days are rejected with HTTP 400, record an immutable `reopen_rejected` audit event, and return pre-filled follow-up information.
+8. **Late Tickets Report & Audit Explainability (R6)**:
+   - Lead report breaks down exact causes of lateness (unclaimed delay, late first response in working minutes, resolution overdue) and explicitly computes and excludes customer-waiting pause intervals.
+9. **Architecture & Testing**:
    - Monorepo with `/server` (Node.js + TypeScript + Express + `pg` + Vitest) and `/web` (React + Vite + TypeScript).
    - Injectable `Clock` abstraction (`SystemClock`, `FakeClock`) for deterministic simulation of SLA policies and time-travel tests.
    - Zero-dependency embedded testing using `@electric-sql/pglite` (Postgres WASM) ensures comprehensive test coverage without external services.

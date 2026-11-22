@@ -57,6 +57,9 @@ export function createAgentRouter(
     const now = clock.now();
 
     try {
+      // Lazy sweep for sleeping hosting instances (R3)
+      await ticketService.sweepAutoCloseTickets(now);
+
       let query = `
         SELECT t.*,
                c.name as customer_name,
@@ -233,6 +236,7 @@ export function createAgentRouter(
     const now = clock.now();
 
     try {
+      await ticketService.sweepAutoCloseTickets(now);
       const ticketRes = await db.query<TicketRow & {
         customer_name: string;
         customer_email: string;

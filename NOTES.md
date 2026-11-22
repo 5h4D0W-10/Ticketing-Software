@@ -32,3 +32,23 @@ Running list of anything skipped, deferred, or intentionally simplified, with ra
 - **Strict Note Separation (INC-0304, R8)**: Customer code does not import or query the `internal_notes` table. Explicit field whitelist serializers guarantee no sensitive fields or internal team notes ever reach customer endpoints.
 - **Canary Test (R8)**: Tested with `SECRET-CANARY-123` across all customer endpoints (create, get by token, reply, reopen, JSON export, CSV export, and 404/400 error responses), asserting that the canary string never appears in any response body or header. Positive verification confirmed that only authenticated agents can see the note on the agent timeline.
 - **Customer Reopen (R4)**: Implemented 5-working-day (2700 working minutes) reopen window with cycle increment, fresh SLA cycle calculation, and `reopen_rejected` audit event logging if expired.
+
+## Phase 5: Auto-Close Sweep, Reopen Window, Late Report
+- **Auto-Close Sweep (R3)**:
+  - Idempotent background sweep closes tickets that have been in `WAITING_CUSTOMER` status for >= 5 working days (45 working hours = 2700 working minutes) using the working-time engine (excluding weekends and festival holidays).
+  - Automatically records an immutable `auto_closed` audit event with actor `"system"`.
+  - Triggered three ways:
+    1. Scheduled background cron via `node-cron` every 5 minutes in long-running server environments.
+    2. Lazy evaluation on ticket reads (`/api/agent/tickets`, `/api/agent/tickets/:id`, `/api/customer/tickets/:token`) to ensure complete reliability in sleeping free-tier/serverless hosting environments.
+    3. Protected endpoint `POST /api/internal/sweep` with `x-internal-secret` header for external webhook or cron services.
+  - Customers attempting to reply to an auto-closed or manually closed ticket receive an informative 400 response along with pre-filled follow-up ticket metadata (`parentTicketId`, follow-up subject) to initiate a new linked ticket.
+- **Reopen Window (R4)**:
+  - Customers can reopen a `RESOLVED` ticket only within 5 working days (2700 working minutes) of `resolved_at`.
+  - When reopened within window: transitions ticket to `OPEN`, increments `cycle` number (`cycle + 1`), sets `clock_start` to reopen timestamp, recalculates fresh SLA response and resolution deadlines, and logs a `reopened` event.
+  - When reopen is requested after the 5-working-day window: rejected with HTTP 400, records an immutable `reopen_rejected` audit event, and returns pre-filled follow-up metadata (`parentTicketId`, `followUp`) to open a new ticket.
+- **Late Tickets Report with Explainable Reasons (R6)**:
+  - Lead-only report (`GET /api/agent/reports/late`) computes explainable human-readable reasons from immutable `ticket_events` and `sla_pauses`:
+    - Unclaimed duration (e.g. `"not claimed for 3h10m"`).
+    - First-reply breach amount in working minutes (e.g. `"first reply 45 working min after deadline"`).
+    - Resolution overdue amount in working days/hours (e.g. `"resolution overdue by 1 working day"`).
+    - Customer waiting time paused during `WAITING_CUSTOMER` intervals is explicitly calculated and reported as `excludedCustomerWaitingMinutes` and formatted (e.g. `"2h"`), ensuring delays outside the team's control are transparently excluded.

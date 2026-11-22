@@ -881,6 +881,96 @@ export class TicketService {
   }
 
   /**
+   * Sweeps tickets in WAITING_CUSTOMER status and auto-closes tickets
+   * where customer has been silent for >= 5 working days (45 working hours = 2700m).
+   * Idempotent: closes tickets once and records auto_closed event with actor "system".
+   */
+  async sweepAutoCloseTickets(overrideNow?: Date): Promise<string[]> {
+    const now = overrideNow || this.clock.now();
+    const holidays = await this.getHolidays();
+    const closedTicketIds: string[] = [];
+
+    const res = await this.db.query<TicketRow>(
+      `SELECT * FROM tickets WHERE status = 'WAITING_CUSTOMER';`
+    );
+
+    for (const ticket of res.rows) {
+      // Find active open pause interval
+      const pauseRes = await this.db.query<{ id: string; paused_at: Date }>(
+        `SELECT id, paused_at FROM sla_pauses
+         WHERE ticket_id = $1 AND cycle = $2 AND resumed_at IS NULL
+         ORDER BY paused_at DESC LIMIT 1;`,
+        [ticket.id, ticket.cycle]
+      );
+
+      const pausedAt = pauseRes.rows[0]?.paused_at
+        ? new Date(pauseRes.rows[0].paused_at)
+        : new Date(ticket.updated_at);
+      const waitingMinutes = workingMinutesBetween(pausedAt, now, holidays);
+
+      // 5 working days = 45 working hours = 2700 working minutes
+      if (waitingMinutes >= 2700) {
+        await withTransaction(this.db, async (tx) => {
+          // Close the pause interval
+          if (pauseRes.rows[0]?.id) {
+            await tx.query(
+              `UPDATE sla_pauses
+               SET resumed_at = $2, working_minutes_paused = $3
+               WHERE id = $1;`,
+              [pauseRes.rows[0].id, now, waitingMinutes]
+            );
+          }
+
+          // Close the ticket
+          await tx.query(
+            `UPDATE tickets
+             SET status = 'CLOSED',
+                 closed_at = $2,
+                 version = version + 1,
+                 updated_at = $2
+             WHERE id = $1;`,
+            [ticket.id, now]
+          );
+
+          // Record auto_closed event (actor: system)
+          await tx.query(
+            `INSERT INTO ticket_events (
+               ticket_id, event_type, actor_type, actor_name, occurred_at, payload
+             )
+             VALUES ($1, 'auto_closed', 'system', 'system', $2, $3);`,
+            [
+              ticket.id,
+              now,
+              JSON.stringify({
+                workingMinutesWaiting: waitingMinutes,
+                thresholdMinutes: 2700,
+                reason: 'Customer silent for >= 5 working days (45 working hours)',
+              }),
+            ]
+          );
+
+          // Record status_changed event
+          await tx.query(
+            `INSERT INTO ticket_events (
+               ticket_id, event_type, actor_type, actor_name, occurred_at, payload
+             )
+             VALUES ($1, 'status_changed', 'system', 'system', $2, $3);`,
+            [
+              ticket.id,
+              now,
+              JSON.stringify({ oldStatus: 'WAITING_CUSTOMER', newStatus: 'CLOSED' }),
+            ]
+          );
+        });
+
+        closedTicketIds.push(ticket.id);
+      }
+    }
+
+    return closedTicketIds;
+  }
+
+  /**
    * Calculates total paused working minutes for a ticket in a given cycle.
    */
   async getTotalPausedWorkingMinutes(
