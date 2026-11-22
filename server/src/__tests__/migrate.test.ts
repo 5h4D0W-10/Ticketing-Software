@@ -10,6 +10,8 @@ describe('Migration runner', () => {
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.sql'));
     expect(files.length).toBeGreaterThan(0);
     expect(files).toContain('001_baseline.sql');
+    expect(files).toContain('002_schema.sql');
+    expect(files).toContain('003_immutability_triggers.sql');
   });
 
   it('applies unapplied migrations and records them in schema_migrations', async () => {
@@ -38,6 +40,8 @@ describe('Migration runner', () => {
     expect(mockPool.connect).toHaveBeenCalled();
     expect(mockClient.release).toHaveBeenCalled();
     expect(applied).toContain('001_baseline.sql');
+    expect(applied).toContain('002_schema.sql');
+    expect(applied).toContain('003_immutability_triggers.sql');
 
     // Verifies schema_migrations table creation
     expect(
@@ -55,10 +59,13 @@ describe('Migration runner', () => {
   });
 
   it('skips already applied migrations', async () => {
+    const dir = resolveMigrationsDir();
+    const allFiles = fs.readdirSync(dir).filter((f) => f.endsWith('.sql'));
+
     const mockClient = {
       query: vi.fn(async (sql: string) => {
         if (sql.includes('SELECT name FROM schema_migrations')) {
-          return { rows: [{ name: '001_baseline.sql' }] }; // Already applied
+          return { rows: allFiles.map((name) => ({ name })) }; // All migrations already applied
         }
         return { rows: [] };
       }),
@@ -73,4 +80,3 @@ describe('Migration runner', () => {
     expect(applied).toEqual([]);
   });
 });
-

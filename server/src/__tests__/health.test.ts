@@ -1,13 +1,45 @@
 import { describe, it, expect, vi } from 'vitest';
-import request from 'supertest';
 import * as dbModule from '../db/connection.js';
 import { app } from '../app.js';
+
+// Lightweight request dispatcher for testing Express routes in sandbox
+async function simulateRequest(method: string, path: string) {
+  return new Promise<{ status: number; body: Record<string, unknown> }>((resolve) => {
+    let statusCode = 200;
+    const req = {
+      method,
+      url: path,
+      path,
+      headers: {},
+      get: (header: string) => (header.toLowerCase() === 'host' ? 'localhost' : undefined),
+    };
+    const res = {
+      statusCode: 200,
+      status(code: number) {
+        statusCode = code;
+        this.statusCode = code;
+        return this;
+      },
+      json(data: Record<string, unknown>) {
+        resolve({ status: statusCode, body: data });
+      },
+      setHeader() {
+        return this;
+      },
+      end() {
+        resolve({ status: statusCode, body: {} });
+      },
+    };
+
+    (app as unknown as { handle: (req: unknown, res: unknown) => void }).handle(req, res);
+  });
+}
 
 describe('GET /health', () => {
   it('returns status ok when DB is connected', async () => {
     vi.spyOn(dbModule, 'checkDbHealth').mockResolvedValueOnce({ ok: true });
 
-    const response = await request(app).get('/health');
+    const response = await simulateRequest('GET', '/health');
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({
       status: 'ok',
@@ -23,7 +55,7 @@ describe('GET /health', () => {
       message: 'Connection refused',
     });
 
-    const response = await request(app).get('/health');
+    const response = await simulateRequest('GET', '/health');
     expect(response.status).toBe(503);
     expect(response.body).toMatchObject({
       status: 'degraded',
@@ -33,4 +65,3 @@ describe('GET /health', () => {
     });
   });
 });
-

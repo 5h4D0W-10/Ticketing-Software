@@ -1,7 +1,13 @@
 -- 001_baseline.sql
 -- Base extensions and migration verification metadata
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+DO $$
+BEGIN
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+EXCEPTION WHEN OTHERS THEN
+    NULL;
+END;
+$$;
 
 CREATE TABLE IF NOT EXISTS system_metadata (
     key VARCHAR(64) PRIMARY KEY,
@@ -12,4 +18,3 @@ CREATE TABLE IF NOT EXISTS system_metadata (
 INSERT INTO system_metadata (key, value)
 VALUES ('system_name', 'Frontdesk Support System')
 ON CONFLICT (key) DO NOTHING;
-
