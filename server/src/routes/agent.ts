@@ -232,7 +232,7 @@ export function createAgentRouter(
 
   // 4. Ticket Detail with full timeline (messages, internal notes, events)
   router.get('/tickets/:id', async (req: AuthenticatedRequest, res: Response) => {
-    const ticketId = req.params.id;
+    const ticketId = String(req.params.id);
     const now = clock.now();
 
     try {
@@ -374,7 +374,7 @@ export function createAgentRouter(
 
   // 5. Atomic Claim (INC-0291, R7)
   router.post('/tickets/:id/claim', async (req: AuthenticatedRequest, res: Response) => {
-    const ticketId = req.params.id;
+    const ticketId = String(req.params.id);
     const user = req.user!;
 
     try {
@@ -394,7 +394,7 @@ export function createAgentRouter(
 
   // 6. Release ticket
   router.post('/tickets/:id/release', async (req: AuthenticatedRequest, res: Response) => {
-    const ticketId = req.params.id;
+    const ticketId = String(req.params.id);
     const verified = await getTicketAndVerifyAssignee(ticketId, req, res);
     if (!verified) return;
 
@@ -412,7 +412,7 @@ export function createAgentRouter(
 
   // 7. Public Reply (with optional waitForCustomer)
   router.post('/tickets/:id/reply', async (req: AuthenticatedRequest, res: Response) => {
-    const ticketId = req.params.id;
+    const ticketId = String(req.params.id);
     const { body, waitForCustomer } = req.body || {};
 
     if (!body || typeof body !== 'string' || body.trim().length === 0) {
@@ -446,7 +446,7 @@ export function createAgentRouter(
 
   // 8. Internal Note (INC-0304, R8)
   router.post('/tickets/:id/notes', async (req: AuthenticatedRequest, res: Response) => {
-    const ticketId = req.params.id;
+    const ticketId = String(req.params.id);
     const { body } = req.body || {};
 
     if (!body || typeof body !== 'string' || body.trim().length === 0) {
@@ -475,7 +475,7 @@ export function createAgentRouter(
 
   // 9. Resolve Ticket
   router.post('/tickets/:id/resolve', async (req: AuthenticatedRequest, res: Response) => {
-    const ticketId = req.params.id;
+    const ticketId = String(req.params.id);
     const verified = await getTicketAndVerifyAssignee(ticketId, req, res);
     if (!verified) return;
 
@@ -493,7 +493,7 @@ export function createAgentRouter(
 
   // 10. Change Priority (R5)
   router.post('/tickets/:id/priority', async (req: AuthenticatedRequest, res: Response) => {
-    const ticketId = req.params.id;
+    const ticketId = String(req.params.id);
     const { priority } = req.body || {};
 
     if (!priority || !['Urgent', 'Medium', 'Small'].includes(priority)) {

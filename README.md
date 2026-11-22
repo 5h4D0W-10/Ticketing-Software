@@ -57,7 +57,13 @@ All demo accounts are seeded with password: `Password123!`
    - Reopen attempts after 5 working days are rejected with HTTP 400, record an immutable `reopen_rejected` audit event, and return pre-filled follow-up information.
 8. **Late Tickets Report & Audit Explainability (R6)**:
    - Lead report breaks down exact causes of lateness (unclaimed delay, late first response in working minutes, resolution overdue) and explicitly computes and excludes customer-waiting pause intervals.
-9. **Architecture & Testing**:
+9. **Frontend User Interface (R6, R8, R10)**:
+   - Built with React 18 + Vite + TypeScript, structured for immediate usability without heavy external styling libraries.
+   - **Agent Portal**: ONE main screen "My tickets" with tabbed queues (`Mine`, `Unassigned queue`, `Late`, `Waiting on customer`, `All tickets`), red `🔴 LATE` and amber `⏳ WAITING ON CUSTOMER` badges, and atomic ticket claim with graceful HTTP 409 conflict notifications.
+   - **Ticket Detail**: Header with SLA targets and first-reply wall-clock + working minutes record, full audit timeline, and exactly two compose boxes: public customer reply (with "Send & wait for customer" checkbox) and private internal team note visually distinguished with yellow styling and lock icon (🔒).
+   - **Lead Supervisor Views**: Late tickets audit report with computed causes, and public/festival holidays CRUD manager.
+   - **Customer Portal**: Minimal, unauthenticated ticket submission with 3 urgency choices, unguessable secret token URLs (`/#/ticket/:token`), strictly public conversation history, reply box, and 5-working-day reopen actions.
+10. **Architecture & Testing**:
    - Monorepo with `/server` (Node.js + TypeScript + Express + `pg` + Vitest) and `/web` (React + Vite + TypeScript).
    - Injectable `Clock` abstraction (`SystemClock`, `FakeClock`) for deterministic simulation of SLA policies and time-travel tests.
    - Zero-dependency embedded testing using `@electric-sql/pglite` (Postgres WASM) ensures comprehensive test coverage without external services.

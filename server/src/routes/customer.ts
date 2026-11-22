@@ -97,7 +97,7 @@ export function createCustomerRouter(
 
   // 2. Get ticket by secret token (public conversation only, R8 & R10)
   router.get('/tickets/:token', async (req: Request, res: Response) => {
-    const token = req.params.token;
+    const token = String(req.params.token);
 
     try {
       const now = clock.now();
@@ -110,7 +110,6 @@ export function createCustomerRouter(
         return;
       }
 
-      const now = clock.now();
       const holidays = await getHolidays();
 
       // Check reopen window (5 working days = 2700 working minutes from resolved_at)
@@ -147,7 +146,7 @@ export function createCustomerRouter(
 
   // 3. Customer reply (resumes SLA if waiting on customer, R2)
   router.post('/tickets/:token/reply', async (req: Request, res: Response) => {
-    const token = req.params.token;
+    const token = String(req.params.token);
     const { body } = req.body || {};
 
     if (!body || typeof body !== 'string' || body.trim().length === 0) {
@@ -204,7 +203,7 @@ export function createCustomerRouter(
 
   // 4. Reopen ticket (R4)
   router.post('/tickets/:token/reopen', async (req: Request, res: Response) => {
-    const token = req.params.token;
+    const token = String(req.params.token);
 
     try {
       const ticket = await findTicketByToken(token);
@@ -325,7 +324,7 @@ export function createCustomerRouter(
 
   // 5. Customer export of their own ticket (JSON / CSV, public messages only, R8)
   router.get('/tickets/:token/export', async (req: Request, res: Response) => {
-    const token = req.params.token;
+    const token = String(req.params.token);
     const format = ((req.query.format as string) || 'json').toLowerCase();
 
     try {

@@ -52,3 +52,27 @@ Running list of anything skipped, deferred, or intentionally simplified, with ra
     - First-reply breach amount in working minutes (e.g. `"first reply 45 working min after deadline"`).
     - Resolution overdue amount in working days/hours (e.g. `"resolution overdue by 1 working day"`).
     - Customer waiting time paused during `WAITING_CUSTOMER` intervals is explicitly calculated and reported as `excludedCustomerWaitingMinutes` and formatted (e.g. `"2h"`), ensuring delays outside the team's control are transparently excluded.
+
+## Phase 6: Agent Screen, Ticket Detail, Lead Report, Customer Pages
+- **Frontend Architecture**: Built using React 18 + Vite + TypeScript. Kept simple, fast, and functional with zero heavy CSS or UI library overhead. Client-side navigation supports direct URLs and hash routing (`/#/ticket/:token`, `/#/agent/tickets/:id`, `/#/agent/reports/late`, `/#/agent/holidays`).
+- **Strict API Tree Separation**:
+  - Customer screens (`CreateTicketPage`, `CustomerTicketPage`) call exclusively `/api/customer/*` via `customerApi.ts`, strictly isolating private notes and internal agent endpoints.
+  - Agent screens (`LoginPage`, `TicketListPage`, `TicketDetailPage`, `LateReportsPage`, `HolidaysPage`) call exclusively `/api/agent/*` and `/api/auth/*` via `agentApi.ts`.
+- **Agent Screen (R6 & R7)**:
+  - ONE main screen "My tickets" with tabbed filters (`Mine`, `Unassigned queue`, `Late`, `Waiting on customer`, `All`).
+  - Clear visual badges: red `🔴 LATE` badge and amber `⏳ WAITING ON CUSTOMER` badge.
+  - Unassigned queue shows atomic "Take this ticket" button. If another agent takes it concurrently, HTTP 409 conflict is captured and displayed nicely with the name of the taking agent (preventing INC-0291).
+- **Ticket Detail & Private Note Guarantee (R8 & R9)**:
+  - Header displays SLA targets, deadlines, and working-time status (remaining or overdue).
+  - Explicit first-reply timing display shows both wall-clock timestamp and elapsed working minutes (`"first replied at ... by Agent (N working minutes after creation)"`).
+  - Exactly two compose boxes:
+    1. Public reply box with "Send & wait for customer" checkbox (pausing SLA clock until customer response).
+    2. Visually distinct internal note box styled with warm yellow background, amber borders, lock icon (🔒), and explicit disclaimer: "STRICTLY CONFIDENTIAL · NEVER VISIBLE TO CUSTOMER".
+  - Actions toolbar for resolving, changing priority (with recomputation), and releasing tickets.
+- **Lead-Only Pages**:
+  - Late tickets audit report (`/agent/reports/late`) with computed explanations (`not claimed for X`, `first reply Y late`, `resolution overdue by Z`) and customer waiting time paused exclusions.
+  - Holidays management page (`/agent/holidays`) for CRUD on festival/public holidays affecting the SLA engine.
+- **Customer Portal (R10)**:
+  - Public ticket creation form with 3 urgency options mapped to Urgent, Medium, and Small.
+  - Generates unguessable secret access link (`/#/ticket/:token`).
+  - Customer ticket view showing exclusively public messages, reply box (auto-resuming paused SLA), and 5-working-day reopen button (or pre-filled follow-up creation link when closed/expired).
