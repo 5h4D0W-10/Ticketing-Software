@@ -21,6 +21,7 @@ services:
           name: frontdesk-db
           property: connectionString
       - key: JWT_SECRET
-        generateCrypto: true
+        generateValue: true
       - key: INTERNAL_SECRET
-        generateCrypto: true
+        generateValue: true
+
