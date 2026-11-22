@@ -1,6 +1,10 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { pool, checkDbHealth } from './connection.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export function resolveMigrationsDir(): string {
   // Check common relative paths to locate the migrations directory

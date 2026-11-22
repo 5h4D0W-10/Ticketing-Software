@@ -90,7 +90,10 @@ export async function getOrInitDb(): Promise<FrontdeskDb> {
     // 3. Fallback: Initialize persistent embedded PostgreSQL (PGlite)
     console.log('ℹ️  No local PostgreSQL daemon found. Initializing embedded PostgreSQL (PGlite 16)...');
     const { PGlite } = await import('@electric-sql/pglite');
-    const dataDir = path.resolve(process.cwd(), '.data/frontdesk-db');
+    const repoRoot = fs.existsSync(path.resolve(process.cwd(), 'server'))
+      ? process.cwd()
+      : path.resolve(process.cwd(), '..');
+    const dataDir = path.resolve(repoRoot, '.data/frontdesk-db');
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
