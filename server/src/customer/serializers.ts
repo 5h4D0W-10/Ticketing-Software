@@ -9,9 +9,14 @@ export interface CustomerPublicMessage {
 }
 
 export interface CustomerPublicTicket {
+  id: string;
+  ticketNumber: number;
   token: string;
+  publicToken: string;
   subject: string;
+  description: string;
   status: string;
+  priority: string;
   createdAt: string;
   updatedAt: string;
   canReopen: boolean;
@@ -30,9 +35,14 @@ export function serializeCustomerTicket(
   canReopen = false
 ): CustomerPublicTicket {
   return {
+    id: ticket.id,
+    ticketNumber: ticket.ticket_number,
     token: ticket.public_token,
+    publicToken: ticket.public_token,
     subject: ticket.subject,
+    description: ticket.description,
     status: ticket.status,
+    priority: ticket.priority,
     createdAt: new Date(ticket.created_at).toISOString(),
     updatedAt: new Date(ticket.updated_at).toISOString(),
     canReopen,

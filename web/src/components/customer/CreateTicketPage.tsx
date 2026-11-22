@@ -40,7 +40,13 @@ export function CreateTicketPage({
         parentTicketId,
       });
 
-      setCreatedTicket(res.ticket);
+      const token = res.ticket?.publicToken || (res.ticket as any)?.token || (res as any)?.publicToken || (res as any)?.token || '';
+      const ticketNumber = res.ticket?.ticketNumber || (res.ticket as any)?.ticket_number;
+      setCreatedTicket({
+        ...res.ticket,
+        publicToken: token,
+        ticketNumber,
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to submit ticket');
     } finally {
@@ -59,7 +65,8 @@ export function CreateTicketPage({
   };
 
   if (createdTicket) {
-    const ticketUrl = getTicketUrl(createdTicket.publicToken);
+    const token = createdTicket.publicToken || (createdTicket as any).token || '';
+    const ticketUrl = getTicketUrl(token);
 
     return (
       <div className="customer-page-container">
@@ -67,7 +74,7 @@ export function CreateTicketPage({
           <div className="success-icon">✓</div>
           <h2 className="success-title">Support Request Received!</h2>
           <p className="success-subtitle">
-            Ticket <strong>#{createdTicket.ticketNumber}</strong> has been logged in Arvo Systems Frontdesk.
+            Ticket <strong>#{createdTicket.ticketNumber || (createdTicket as any).ticket_number || ''}</strong> has been logged in Arvo Systems Frontdesk.
           </p>
 
           <div className="ticket-token-box">
@@ -82,7 +89,7 @@ export function CreateTicketPage({
               <button
                 type="button"
                 className="btn btn-outline btn-sm"
-                onClick={() => handleCopy(createdTicket.publicToken)}
+                onClick={() => handleCopy(token)}
               >
                 {copied ? '✓ Copied!' : 'Copy Link'}
               </button>
@@ -96,7 +103,7 @@ export function CreateTicketPage({
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => onTicketCreated(createdTicket.publicToken)}
+              onClick={() => onTicketCreated(token)}
             >
               Go to Your Ticket Conversation →
             </button>

@@ -80,12 +80,14 @@ export interface Holiday {
 export interface CustomerTicket {
   id: string;
   ticketNumber: number;
+  token?: string;
+  publicToken?: string;
   subject: string;
   description: string;
   priority: TicketPriority;
   status: TicketStatus;
   canReopen: boolean;
-  clockStart: string;
+  clockStart?: string;
   createdAt: string;
   updatedAt: string;
 }

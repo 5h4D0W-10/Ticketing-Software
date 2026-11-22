@@ -175,9 +175,15 @@ export function CustomerTicketPage({
       {/* Ticket Overview Card */}
       <div className="card customer-ticket-card">
         <div className="ticket-title-row">
-          <span className="ticket-id-tag">#{ticket.ticketNumber}</span>
+          <span className="ticket-id-tag">#{ticket.ticketNumber || (ticket as any).ticket_number || ''}</span>
           <h1 className="ticket-subject">{ticket.subject}</h1>
         </div>
+
+        {ticket.description && (
+          <p className="ticket-description" style={{ marginTop: '0.75rem', color: '#4b5563', fontSize: '0.95rem', lineHeight: '1.5' }}>
+            {ticket.description}
+          </p>
+        )}
 
         <div className="customer-ticket-meta">
           <span className={`status-pill status-${ticket.status.toLowerCase()}`}>

@@ -88,6 +88,8 @@ export function createCustomerRouter(
 
       res.status(201).json({
         ticket: serializeCustomerTicket(ticket, false),
+        token: ticket.public_token,
+        publicToken: ticket.public_token,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
