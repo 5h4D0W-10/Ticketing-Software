@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: frontdesk-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: frontdesk
+      POSTGRES_PASSWORD: frontdesk_secret
+      POSTGRES_DB: frontdesk_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - frontdesk_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U frontdesk -d frontdesk_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  frontdesk_pgdata:
+
