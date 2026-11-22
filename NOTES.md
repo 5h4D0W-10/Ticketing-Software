@@ -12,3 +12,10 @@ Running list of anything skipped, deferred, or intentionally simplified, with ra
 - **Trigger Functions**: Created `enforce_table_immutability()` function and attached `BEFORE UPDATE OR DELETE` (row-level) and `BEFORE TRUNCATE` (statement-level) triggers to `ticket_events`, `messages`, and `internal_notes`.
 - **Holidays Table**: Holiday table created in migration `002_schema.sql`; the seed data for 2026 Kerala/Indian public and festival holidays will be populated in the seed/auth phase.
 - **Working Time Precision**: Working time calculations are computed with millisecond precision in `Asia/Kolkata` with zero timezone drift or daylight savings ambiguities.
+
+## Phase 2: Ticket Domain Logic
+- **Explicit State Machine (R11)**: Strict transition validation (`NEW` -> `OPEN` <-> `WAITING_CUSTOMER` -> `RESOLVED` -> `CLOSED`; `RESOLVED` -> `OPEN`; `OPEN` -> `NEW`). Invalid transitions reject with typed `InvalidStateTransitionError` (HTTP 422).
+- **Atomic Transactions**: Every business operation (ticket creation, replies, pause/resume, priority change, resolve, claim, release) and all corresponding audit events are committed together in a single DB transaction.
+- **SLA Pause/Resume (R2)**: Handled by creating open pause intervals in `sla_pauses`. When resumed by customer reply, only unmet milestones (e.g. `resolution_due_at`, or `response_due_at` if not yet met) are shifted forward by working minutes paused.
+- **Sticky Breach Recording**: Breaches are recorded idempotently via `recordBreachEvent`, ensuring that a milestone breach creates an immutable audit event once, which is sticky and never overwritten.
+- **Mid-Ticket Priority Changes (R5)**: Recomputes both deadlines from `clock_start` using new priority targets while adding all accumulated working minutes paused. Pre-existing breach status is preserved.

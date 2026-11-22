@@ -35,3 +35,4 @@ export class FakeClock implements Clock {
     this.advanceHours(days * 24);
   }
 }
+

@@ -48,3 +48,4 @@ CREATE TRIGGER trg_prevent_truncate_internal_notes
 BEFORE TRUNCATE ON internal_notes
 FOR EACH STATEMENT
 EXECUTE FUNCTION enforce_table_immutability();
+

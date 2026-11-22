@@ -136,3 +136,4 @@ describe('Database Immutability Triggers (Direct SQL)', () => {
     });
   });
 });
+
